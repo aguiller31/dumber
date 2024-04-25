@@ -66,6 +66,7 @@ private:
     ComRobot robot;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    int battery = BATTERY_UNKNOWN;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -73,6 +74,7 @@ private:
     RT_TASK th_server;
     RT_TASK th_sendToMon;
     RT_TASK th_receiveFromMon;
+    RT_TASK th_receiveFromRob;
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
@@ -125,7 +127,10 @@ private:
      * @brief Thread receiving data from monitor.
      */
     void ReceiveFromMonTask(void *arg);
-    
+      /**
+     * @brief Thread receiving data from robot.
+     */
+    void ReceiveFromRobTask(void *arg);
     /**
      * @brief Thread opening communication with the robot.
      */

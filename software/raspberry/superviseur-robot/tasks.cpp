@@ -115,6 +115,10 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_create(&th_receiveFromRob, "th_receiveFromRob", 0, PRIORITY_TRECEIVEFROMMON, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     if (err = rt_task_create(&th_openComRobot, "th_openComRobot", 0, PRIORITY_TOPENCOMROBOT, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -163,6 +167,10 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_start(&th_receiveFromRob, (void(*)(void*)) & Tasks::ReceiveFromRobTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     if (err = rt_task_start(&th_openComRobot, (void(*)(void*)) & Tasks::OpenComRobot, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -204,7 +212,7 @@ void Tasks::Join() {
  */
 void Tasks::BatteryTask(void *arg) {
     int rs;
-    int cpMove;
+    int cpBattery;
     
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
@@ -213,29 +221,32 @@ void Tasks::BatteryTask(void *arg) {
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    rt_task_set_periodic(NULL, TM_NOW, 30*100000000); //<=> 3s
 
     while (1) {
         rt_task_wait_period(NULL);
-        cout << "Periodic movement update";
+        cout << "Periodic battery update";
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
         rs = robotStarted;
         rt_mutex_release(&mutex_robotStarted);
         if (rs == 1) {
-            rt_mutex_acquire(&mutex_move, TM_INFINITE);
-            cpMove = move;
-            rt_mutex_release(&mutex_move);
-            
-            cout << " move: " << cpMove;
+
             
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Write(new Message((MessageID)cpMove));
+            robot.Write(new Message((MessageID)BATTERY_GET));
+  
             rt_mutex_release(&mutex_robot);
-        }
+        
+            rt_mutex_acquire(&mutex_battery, TM_INFINITE);
+            cpBattery = battery;
+            rt_mutex_release(&mutex_battery);
+            
+            cout << " battery: " << cpBattery;
+            
         cout << endl << flush;
     }
 }
-    
+}
 /**
  * @brief Thread handling server communication with the monitor.
  */
@@ -287,6 +298,37 @@ void Tasks::SendToMonTask(void* arg) {
         rt_mutex_release(&mutex_monitor);
     }
 }
+/**
+ * @brief Thread receiving data from robot.
+ */
+void Tasks::ReceiveFromRobTask(void *arg) {
+    Message *msgRcv;
+    
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    /**************************************************************************************/
+    /* The task receiveFromMon starts here                                                */
+    /**************************************************************************************/
+    rt_sem_p(&sem_serverOk, TM_INFINITE);
+    cout << "Received message from robot activated" << endl << flush;
+
+    while (1) {
+        msgRcv = robot.GetBattery();
+        cout << "Rcv <= " << msgRcv->ToString() << endl << flush;
+
+       if (msgRcv->CompareID(BATTERY_UNKNOWN) ||
+                msgRcv->CompareID(MESSAGE_ROBOT_BATTERY_LEVEL)) {
+
+            rt_mutex_acquire(&mutex_battery, TM_INFINITE);
+            battery = msgRcv->GetID();
+            rt_mutex_release(&mutex_battery);
+        }
+        delete(msgRcv); // mus be deleted manually, no consumer
+    }
+}
+
 
 /**
  * @brief Thread receiving data from monitor.
