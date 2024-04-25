@@ -76,6 +76,7 @@ private:
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
+    RT_TASK th_battery;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -84,6 +85,7 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    RT_MUTEX mutex_battery;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -102,10 +104,17 @@ private:
     /**********************************************************************/
     /* Tasks' functions                                                   */
     /**********************************************************************/
+    /**********************************************************************/
+    /**
+     * @brief Get battery level from robot and send it periodically to monitor.
+     */
+    void BatteryTask(void *arg);
+    
     /**
      * @brief Thread handling server communication with the monitor.
      */
     void ServerTask(void *arg);
+    
      
     /**
      * @brief Thread sending data to monitor.
