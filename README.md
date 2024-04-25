@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-# Dumber
+# Robot_Mobile
 
 Depot du projet de temps reel 4eme année au departement GEI de l'INSA Toulouse.
 
@@ -9,6 +8,3 @@ Depot du projet de temps reel 4eme année au departement GEI de l'INSA Toulouse.
 - doc: contient les sujets de TD et TP
 - aruco_markers: Script de generation des tags (aruco) utilisés sur les robots
 
-=======
-# Robot_Mobile
->>>>>>> 969b6de (first commit)
