@@ -80,7 +80,9 @@ private:
     RT_TASK th_startRobot;
     RT_TASK th_move;
     RT_TASK th_battery;
-    RT_TASK th_camera;
+    RT_TASK th_cameraOpen;
+    RT_TASK th_cameraClose;
+    RT_TASK th_cameraFindArena;
     /**********************************************************************/
     /* Mutex                                                              */
     /**********************************************************************/
@@ -88,7 +90,6 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
-    RT_MUTEX mutex_battery;
     RT_MUTEX mutex_camera;
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -99,6 +100,8 @@ private:
     RT_SEM sem_startRobot;
     RT_SEM sem_startBattery;
     RT_SEM sem_startCamera;
+    RT_SEM sem_stopCamera;
+    RT_SEM sem_finArenaCamera;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -115,7 +118,9 @@ private:
      */
     void BatteryTask(void *arg);
     
-        void CameraTask(void *arg);
+        void CameraTaskOpen(void *arg);
+        void CameraTaskClose(void *arg);
+        void CameraTaskFindArena(void *arg);
         
     /**
      * @brief Thread handling server communication with the monitor.
