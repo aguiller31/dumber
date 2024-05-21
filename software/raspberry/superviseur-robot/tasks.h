@@ -66,10 +66,9 @@ private:
     ComRobot robot;
     Camera camera;
     
-    bool statusCameraOpened = false;
+    bool statusCameraOpenedForSending = false;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
-    int battery = BATTERY_UNKNOWN;
     bool arenaConfirmed=0;
     bool getPosition=false;
     Arena arenaConfirmedByUser;
@@ -89,6 +88,9 @@ private:
     RT_TASK th_cameraSendImage;
     RT_TASK th_cameraFindArena;
     RT_TASK th_connexionToRobotLost;
+    RT_TASK th_monitorConnexionLost;
+    RT_TASK th_stopRobot;
+    RT_TASK th_stopMonitor;
     /**********************************************************************/
     /* Mutex                                                              */
     /**********************************************************************/
@@ -97,6 +99,8 @@ private:
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
     RT_MUTEX mutex_camera;
+    RT_MUTEX mutex_position;
+    RT_MUTEX mutex_arena;
     /**********************************************************************/
     /* Semaphores                                                         */
     /**********************************************************************/
@@ -104,13 +108,15 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
-    RT_SEM sem_startBattery;
     RT_SEM sem_startCamera;
     RT_SEM sem_stopCamera;
     RT_SEM sem_startSendImageCamera;
     RT_SEM sem_stopSendImageCamera;
     RT_SEM sem_finArenaCamera;
     RT_SEM sem_findArenaCameraConfirm;
+    RT_SEM sem_monitorConnectionLost;
+    RT_SEM sem_robotStop;
+    RT_SEM sem_monitorStop;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -122,16 +128,6 @@ private:
     /* Tasks' functions                                                   */
     /**********************************************************************/
     /**********************************************************************/
-    /**
-     * @brief Get battery level from robot and send it periodically to monitor.
-     */
-    void BatteryTask(void *arg);
-    
-        void CameraTaskOpen(void *arg);
-        void CameraTaskClose(void *arg);
-        void CameraTaskFindArena(void *arg);
-        void CameraTaskSendImage(void *arg);
-        void ConnexionToRobotLostTask(void *arg);
         
     /**
      * @brief Thread handling server communication with the monitor.
@@ -166,7 +162,21 @@ private:
      * @brief Thread handling control of the robot.
      */
     void MoveTask(void *arg);
+
+    /**
+     * @brief Get battery level from robot and send it periodically to monitor.
+     */
+    void BatteryTask(void *arg);
     
+    void CameraTaskOpen(void *arg);
+    void CameraTaskClose(void *arg);
+    void CameraTaskFindArena(void *arg);
+    void CameraTaskSendImage(void *arg);
+    void ConnexionToRobotLostTask(void *arg);
+
+    void MonitorTaskLostConnection(void *arg);
+    void StopRobotTask(void *arg);
+    void StopMonitorTask(void *arg);
     /**********************************************************************/
     /* Queue services                                                     */
     /**********************************************************************/
