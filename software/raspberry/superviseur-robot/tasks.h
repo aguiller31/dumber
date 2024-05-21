@@ -71,6 +71,7 @@ private:
     int move = MESSAGE_ROBOT_STOP;
     int battery = BATTERY_UNKNOWN;
     bool arenaConfirmed=0;
+    bool getPosition=false;
     Arena arenaConfirmedByUser;
     /**********************************************************************/
     /* Tasks                                                              */
@@ -87,6 +88,7 @@ private:
     RT_TASK th_cameraClose;
     RT_TASK th_cameraSendImage;
     RT_TASK th_cameraFindArena;
+    RT_TASK th_connexionToRobotLost;
     /**********************************************************************/
     /* Mutex                                                              */
     /**********************************************************************/
@@ -129,6 +131,7 @@ private:
         void CameraTaskClose(void *arg);
         void CameraTaskFindArena(void *arg);
         void CameraTaskSendImage(void *arg);
+        void ConnexionToRobotLostTask(void *arg);
         
     /**
      * @brief Thread handling server communication with the monitor.
