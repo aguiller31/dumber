@@ -25,7 +25,9 @@
 #define PRIORITY_TSENDTOMON 22
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 24
-#define PRIORITY_TCAMERA 21
+#define PRIORITY_TCAMERA 20
+#define PRIORITY_TCAMERA_OFF 23
+#define PRIORITY_TCAMERA_ON 22
 #define PRIORITY_TBATTERY 23
 
 /*
@@ -126,6 +128,11 @@ void Tasks::Init() {
     if (err = rt_sem_create(&sem_finArenaCamera, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
+   
+    }
+    if (err = rt_sem_create(&sem_findArenaCameraConfirm, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
     }
     
     cout << "Semaphores created successfully" << endl << flush;
@@ -162,12 +169,12 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_cameraOpen, "th_cameraOpen", 0, PRIORITY_TCAMERA, 0)) {
+    if (err = rt_task_create(&th_cameraOpen, "th_cameraOpen", 0, PRIORITY_TCAMERA_ON, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     } 
     
-    if (err = rt_task_create(&th_cameraClose, "th_cameraClose", 0, PRIORITY_TCAMERA, 0)) {
+    if (err = rt_task_create(&th_cameraClose, "th_cameraClose", 0, PRIORITY_TCAMERA_OFF, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -404,6 +411,13 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             
             rt_sem_v(&sem_finArenaCamera)    ;
         } 
+        else if(msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM)){
+            arenaConfirmed=true;
+            rt_sem_v(&sem_findArenaCameraConfirm)    ;
+        }else if( msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)){
+            arenaConfirmed=false;
+            rt_sem_v(&sem_findArenaCameraConfirm)    ;
+        }
         delete(msgRcv); // mus be deleted manually, no consumer
     }
 }
@@ -635,11 +649,15 @@ void Tasks::CameraTaskSendImage(void *arg) {
                   try{
                       
                   image=new Img(camera.Grab());
+                  if(!arenaConfirmed){
                     arena=new Arena(image->SearchArena());
                  if(!arena->IsEmpty()){
                       image->DrawArena(*arena);
                   }
-
+                  }else{
+                    
+                     image->DrawArena(arenaConfirmedByUser);
+                  }
                       msgSendImg = new MessageImg(MESSAGE_CAM_IMAGE,image);
 
 
@@ -670,6 +688,7 @@ void Tasks::CameraTaskFindArena(void *arg) {
     MessageImg * msgSendImg;
     Img * image;
     Arena * arena;
+
     while(1){
         
         rt_sem_p(&sem_finArenaCamera, TM_INFINITE);
@@ -680,24 +699,42 @@ void Tasks::CameraTaskFindArena(void *arg) {
             cout << "Camera opened successfully" << endl << flush;
                   image=new Img(camera.Grab());
                     arena=new Arena(image->SearchArena());
+                    
                  if(!arena->IsEmpty()){
+                     arenaConfirmed=false;
                       image->DrawArena(*arena);
+                   
                       msgSendImg = new MessageImg(MESSAGE_CAM_IMAGE,image);
+                        WriteInQueue(&q_messageToMon, msgSendImg); 
+                        
+                        //================================
+                      rt_sem_p(&sem_findArenaCameraConfirm, TM_INFINITE);
+                      if(arenaConfirmed == true){ //CONFIRM
+                          cout << "Arena confirmed" << endl << flush;
+                          arenaConfirmedByUser = *arena;
+                          msgSend = new Message(MESSAGE_ANSWER_ACK);
+  
 
+                      }else{//INFIRM
+                          cout << "Arena infirmed" << endl << flush;
+                          arenaConfirmed=false;
+                          msgSend = new Message(MESSAGE_ANSWER_ACK);
+                      }
 
-                  WriteInQueue(&q_messageToMon, msgSendImg); 
+                  WriteInQueue(&q_messageToMon, msgSend); 
+             
+                  //=======================================
                  }else{
-                     msgSend = new Message(MESSAGE_ANSWER_NACK);
+                    msgSend = new Message(MESSAGE_ANSWER_NACK);
            
         WriteInQueue(&q_messageToMon, msgSend);
+                    
                  }
                   }else{
                      msgSend = new Message(MESSAGE_ANSWER_NACK);
            
         WriteInQueue(&q_messageToMon, msgSend);
                   }
-                      
-                  
                   }
          
                   catch(...){
@@ -706,6 +743,7 @@ void Tasks::CameraTaskFindArena(void *arg) {
            
         WriteInQueue(&q_messageToMon, msgSend);
                   }
+        rt_sem_v(&sem_startCamera) ;
                   rt_mutex_release(&mutex_camera);
             
      }

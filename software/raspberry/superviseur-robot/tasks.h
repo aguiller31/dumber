@@ -70,7 +70,8 @@ private:
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
     int battery = BATTERY_UNKNOWN;
-    
+    bool arenaConfirmed=0;
+    Arena arenaConfirmedByUser;
     /**********************************************************************/
     /* Tasks                                                              */
     /**********************************************************************/
@@ -107,6 +108,7 @@ private:
     RT_SEM sem_startSendImageCamera;
     RT_SEM sem_stopSendImageCamera;
     RT_SEM sem_finArenaCamera;
+    RT_SEM sem_findArenaCameraConfirm;
 
     /**********************************************************************/
     /* Message queues                                                     */
